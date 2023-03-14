@@ -8,6 +8,8 @@
    [sci.core :as sci]
    [sci.ctx-store :as ctx-store]
    [clojure.string :as str]
+   [juxt.trip.core :as trip]
+   [datascript.core :as d]
    [medley.core]
    [clojure.pprint :as pp]))
 
@@ -87,4 +89,12 @@
 
 (def medley-ns (sci/copy-ns medley.core (sci/create-ns 'medley.core)))
 
-(ctx-store/swap-ctx! sci/merge-opts {:namespaces {'medley.core medley-ns}})
+(def datascript-ns (sci/copy-ns datascript.core (sci/create-ns 'datascript)))
+
+(def trip-ns (sci/copy-ns juxt.trip.core (sci/create-ns 'juxt.trip.core) {:exclude-when-meta []}))
+
+(ctx-store/swap-ctx! sci/merge-opts {:namespaces {'medley.core medley-ns
+                                                  'datascript.core datascript-ns
+                                                  'juxt.trip.core trip-ns}})
+
+(set! cljs.core/*eval* #(sci/eval-form (ctx-store/get-ctx) %))
