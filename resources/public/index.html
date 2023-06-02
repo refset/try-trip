@@ -1,6 +1,9 @@
-<h1>Try Trip: Datalog as a namespace</h1><p>This webpage showcases <a href='https://github.com/juxt/trip/'>Trip</a>&mdash;a <a href='https://github.com/juxt/trip/blob/main/src/juxt/trip/core.cljc'>single-namespace</a> library for Clojure that compiles <a href='https://github.com/tonsky/datascript'>DataScript</a>-compatible Datalog into <code>for</code> loops&mdash;and is derived from Borkdude's excellent <a href='https://borkdude.github.io/cljs-showcase'>cljs-showcase</a> template.</p><p>The interactive snippets below are made possible using a combination of ClojureScript & <a href='https://github.com/babashka/sci'>SCI</a>. SCI is required to support Trip's need for runtime access to <code>cljs.core/&#42;eval&#42;</code> (<code>eval</code> is used internally for query compilation).</p><p>The API documentation for Trip can be browsed <a href='https://github.com/juxt/trip/blob/main/API.md'>here</a>. <div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;+ &quot;Hello, &quot; &quot;ClojureScript REPL!&quot;&#41;
+<h1>Try Trip: Datalog as a namespace</h1><p>This is a showcase of <a href='https://github.com/juxt/trip/'>Trip</a>&mdash;a <a href='https://github.com/juxt/trip/blob/main/src/juxt/trip/core.cljc'>single-namespace</a> library for Clojure that compiles (approximately) <a href='https://github.com/tonsky/datascript'>DataScript</a>-compatible Datalog into Clojure <code>for</code> loops. This webpage is derived from Borkdude's excellent <a href='https://borkdude.github.io/cljs-showcase'>cljs-showcase</a> template and the classic <a href='http://www.learndatalogtoday.org'>learndatalogtoday.org</a> tutorial.</p><p>The interactive snippets below are made possible using a combination of ClojureScript & <a href='https://github.com/babashka/sci'>SCI</a>. SCI is required to support Trip's need for runtime access to <code>cljs.core/&#42;eval&#42;</code> (<code>eval</code> is used internally for query compilation). For more background and an explanation of how Trip works, see the introductory <a href='https://juxt.pro/blog/introducing-trip'>blog post</a>.</p><h2>Using this webpage</h2><p>The CodeMirror editors throughout the page are interactive. Try updating the text in the following editor and see the result immediately below update whenever you either: press <code>ctrl+enter</code>, or click on the <code>Eval</code> button (or even the various result/editor divs).</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;+ &quot;Hello, &quot; &quot;ClojureScript REPL!&quot;&#41;
 </code></pre><p></div></p><p>Very basic error messages also show up as results: <div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;+ foo 1&#41;
-</code></pre><p></div></p><p>The Trip namespace is available to be require'd, so let's create our first database! <div style="width: 600px;" class="cljs-showcase" data-cljs-showcase-no-editable="true"></p><pre><code class="clojure">&#40;require '&#91;juxt.trip.core :as trip&#93;&#41;
+</code></pre><p></div></p><p>All editors share the same evaluation context (so you can reference definitions across editors). <div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;def bar 1&#41;
+</code></pre><p></div></p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;+ bar bar&#41;
+</code></pre><p></div></p><h2>Trip API docs</h2><p>The API documentation for Trip can be browsed <a href='https://github.com/juxt/trip/blob/main/API.md'>here</a>.</p><h2>A quick tour</h2><p>The Trip namespace is available to be require'd, so let's create our first database! <div style="width: 600px;" class="cljs-showcase" data-cljs-showcase-no-editable="true"></p><pre><code class="clojure">;; note: this snippet is intentionally non-editable
+&#40;require '&#91;juxt.trip.core :as trip&#93;&#41;
 &#40;def t &#40;trip/create-conn&#41;&#41; ;; an atom containing the result of `&#40;trip/empty-db&#41;`
 </code></pre><p></div></p><p>A quick a look at the value of <code>t</code> shows that Trip's three internal indexes are empty: <div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">@t ;; equivalent to `&#40;trip/db t&#41;`
 </code></pre><p></div></p><p>Trip is completely schemaless, so can we simply insert a map containing a user-specified <code>db/id</code> value to create an entity in our database: <div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;trip/transact! t &#91;{:db/id :foo :ref :bar}&#93;&#41;
@@ -9,6 +12,7 @@
                :where &#91;&#91;?e :db/id&#93;&#93;}&#41;&#41;
 </code></pre><p></div></p><p>Explicit IDs underpin the dynamic and schemaless experience of using Trip, however this also means that updates happen at the granularity of entire entities. Transacting a new map for an existing entity will first retract all existing triples for that ID and then add the complete new set of triples (i.e. there is some cost of redundant work to the flexibility): <div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;-&gt; &#40;trip/transact! t &#91;{:db/id :foo
                        :ref :bar
+                       :my-set #{1 2 3} ;; also note that set values are decomposed into multiple triples
                        :val {:nested &#91;:thing&#93;}}&#93;&#41;
     :tx-data&#41;
 </code></pre><p></div></p><p>If we insert an entity with an ID that happens to correlate with an existing value under an attribute, we can dynamically treat is as if it were a "reference" type attribute: <div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;trip/transact! t &#91;{:db/id :bar :val &quot;joined!&quot;}&#93;&#41;
@@ -32,4 +36,673 @@
     :tx-data&#41;
 </code></pre><p></div></p><p>Should you wish to quickly compare Trip's API with DataScript, note that it is also available to be require'd throughout this webpage:</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;require '&#91;datascript.core :as d&#93;&#41;
 &#40;d/empty-db&#41;
-</code></pre><p></div></p><p>That's a wrap! Thanks for taking a look at Trip and please give the <a href='https://github.com/juxt/trip/'>repo</a> a star. PRs, Issues and questions are welcome 🙏</p><p><script src="js/main.js" type="application/javascript"></script></p>
+</code></pre><p></div></p><p>Congratulations! You can now be productive, unless however you still need to learn Datalog...</p><h2>Learn Trip Datalog Today</h2><p>The following sections are derived from the classic <a href='http://learndatalogtoday.org'>learndatalogtoday.org</a> tutorial materials and adapted for Trip. It is an interactive tutorial designed to teach you the Trip/DataScript dialect of Datalog. Datalog is a declarative database query language with roots in logic programming. Datalog has similar expressive power to SQL.</p><h2>Loading movie data</h2><p>First, we'll use a fresh Trip instance.</p><p><div style="width: 600px;" class="cljs-showcase" data-cljs-showcase-no-editable="true"><pre><code class="clojure">;; note: this snippet is intentionally non-editable
+&#40;require '&#91;juxt.trip.core :as trip&#93;&#41;
+&#40;def t2 &#40;trip/create-conn&#41;&#41; ;; an atom containing the result of `&#40;trip/empty-db&#41;`
+</code></pre></p><p></div></p><p>Now let's add some data. The following vector of maps contains two kinds of maps: maps relating to people (actors and directors) and maps relating to movies. As a convention to aid human interpretation, all persons have IDs like <code>1XX</code> and all movies have IDs like <code>2XX</code>. Many ID value types are supported, such as strings and UUIDs, which may be more appropriate in a real application.</p><p><div style="width: 600px; height: 100px; overflow-y: scroll;" class="cljs-showcase"></p><pre><code class="clojure">&#40;def my-maps
+  &#91;{:person/name &quot;James Cameron&quot;,
+    :person/born #inst &quot;1954-08-16T00:00:00.000-00:00&quot;,
+    :db/id 100}
+   {:person/name &quot;Arnold Schwarzenegger&quot;,
+    :person/born #inst &quot;1947-07-30T00:00:00.000-00:00&quot;,
+    :db/id 101}
+   {:person/name &quot;Linda Hamilton&quot;,
+    :person/born #inst &quot;1956-09-26T00:00:00.000-00:00&quot;,
+    :db/id 102}
+   {:person/name &quot;Michael Biehn&quot;,
+    :person/born #inst &quot;1956-07-31T00:00:00.000-00:00&quot;,
+    :db/id 103}
+   {:person/name &quot;Ted Kotcheff&quot;,
+    :person/born #inst &quot;1931-04-07T00:00:00.000-00:00&quot;,
+    :db/id 104}
+   {:person/name &quot;Sylvester Stallone&quot;,
+    :person/born #inst &quot;1946-07-06T00:00:00.000-00:00&quot;,
+    :db/id 105}
+   {:person/name &quot;Richard Crenna&quot;,
+    :person/born #inst &quot;1926-11-30T00:00:00.000-00:00&quot;,
+    :person/death #inst &quot;2003-01-17T00:00:00.000-00:00&quot;,
+    :db/id 106}
+   {:person/name &quot;Brian Dennehy&quot;,
+    :person/born #inst &quot;1938-07-09T00:00:00.000-00:00&quot;,
+    :db/id 107}
+   {:person/name &quot;John McTiernan&quot;,
+    :person/born #inst &quot;1951-01-08T00:00:00.000-00:00&quot;,
+    :db/id 108}
+   {:person/name &quot;Elpidia Carrillo&quot;,
+    :person/born #inst &quot;1961-08-16T00:00:00.000-00:00&quot;,
+    :db/id 109}
+   {:person/name &quot;Carl Weathers&quot;,
+    :person/born #inst &quot;1948-01-14T00:00:00.000-00:00&quot;,
+    :db/id 110}
+   {:person/name &quot;Richard Donner&quot;,
+    :person/born #inst &quot;1930-04-24T00:00:00.000-00:00&quot;,
+    :db/id 111}
+   {:person/name &quot;Mel Gibson&quot;,
+    :person/born #inst &quot;1956-01-03T00:00:00.000-00:00&quot;,
+    :db/id 112}
+   {:person/name &quot;Danny Glover&quot;,
+    :person/born #inst &quot;1946-07-22T00:00:00.000-00:00&quot;,
+    :db/id 113}
+   {:person/name &quot;Gary Busey&quot;,
+    :person/born #inst &quot;1944-07-29T00:00:00.000-00:00&quot;,
+    :db/id 114}
+   {:person/name &quot;Paul Verhoeven&quot;,
+    :person/born #inst &quot;1938-07-18T00:00:00.000-00:00&quot;,
+    :db/id 115}
+   {:person/name &quot;Peter Weller&quot;,
+    :person/born #inst &quot;1947-06-24T00:00:00.000-00:00&quot;,
+    :db/id 116}
+   {:person/name &quot;Nancy Allen&quot;,
+    :person/born #inst &quot;1950-06-24T00:00:00.000-00:00&quot;,
+    :db/id 117}
+   {:person/name &quot;Ronny Cox&quot;,
+    :person/born #inst &quot;1938-07-23T00:00:00.000-00:00&quot;,
+    :db/id 118}
+   {:person/name &quot;Mark L. Lester&quot;,
+    :person/born #inst &quot;1946-11-26T00:00:00.000-00:00&quot;,
+    :db/id 119}
+   {:person/name &quot;Rae Dawn Chong&quot;,
+    :person/born #inst &quot;1961-02-28T00:00:00.000-00:00&quot;,
+    :db/id 120}
+   {:person/name &quot;Alyssa Milano&quot;,
+    :person/born #inst &quot;1972-12-19T00:00:00.000-00:00&quot;,
+    :db/id 121}
+   {:person/name &quot;Bruce Willis&quot;,
+    :person/born #inst &quot;1955-03-19T00:00:00.000-00:00&quot;,
+    :db/id 122}
+   {:person/name &quot;Alan Rickman&quot;,
+    :person/born #inst &quot;1946-02-21T00:00:00.000-00:00&quot;,
+    :db/id 123}
+   {:person/name &quot;Alexander Godunov&quot;,
+    :person/born #inst &quot;1949-11-28T00:00:00.000-00:00&quot;,
+    :person/death #inst &quot;1995-05-18T00:00:00.000-00:00&quot;,
+    :db/id 124}
+   {:person/name &quot;Robert Patrick&quot;,
+    :person/born #inst &quot;1958-11-05T00:00:00.000-00:00&quot;,
+    :db/id 125}
+   {:person/name &quot;Edward Furlong&quot;,
+    :person/born #inst &quot;1977-08-02T00:00:00.000-00:00&quot;,
+    :db/id 126}
+   {:person/name &quot;Jonathan Mostow&quot;,
+    :person/born #inst &quot;1961-11-28T00:00:00.000-00:00&quot;,
+    :db/id 127}
+   {:person/name &quot;Nick Stahl&quot;,
+    :person/born #inst &quot;1979-12-05T00:00:00.000-00:00&quot;,
+    :db/id 128}
+   {:person/name &quot;Claire Danes&quot;,
+    :person/born #inst &quot;1979-04-12T00:00:00.000-00:00&quot;,
+    :db/id 129}
+   {:person/name &quot;George P. Cosmatos&quot;,
+    :person/born #inst &quot;1941-01-04T00:00:00.000-00:00&quot;,
+    :person/death #inst &quot;2005-04-19T00:00:00.000-00:00&quot;,
+    :db/id 130}
+   {:person/name &quot;Charles Napier&quot;,
+    :person/born #inst &quot;1936-04-12T00:00:00.000-00:00&quot;,
+    :person/death #inst &quot;2011-10-05T00:00:00.000-00:00&quot;,
+    :db/id 131}
+   {:person/name &quot;Peter MacDonald&quot;, :db/id 132}
+   {:person/name &quot;Marc de Jonge&quot;,
+    :person/born #inst &quot;1949-02-16T00:00:00.000-00:00&quot;,
+    :person/death #inst &quot;1996-06-06T00:00:00.000-00:00&quot;,
+    :db/id 133}
+   {:person/name &quot;Stephen Hopkins&quot;, :db/id 134}
+   {:person/name &quot;Ruben Blades&quot;,
+    :person/born #inst &quot;1948-07-16T00:00:00.000-00:00&quot;,
+    :db/id 135}
+   {:person/name &quot;Joe Pesci&quot;,
+    :person/born #inst &quot;1943-02-09T00:00:00.000-00:00&quot;,
+    :db/id 136}
+   {:person/name &quot;Ridley Scott&quot;,
+    :person/born #inst &quot;1937-11-30T00:00:00.000-00:00&quot;,
+    :db/id 137}
+   {:person/name &quot;Tom Skerritt&quot;,
+    :person/born #inst &quot;1933-08-25T00:00:00.000-00:00&quot;,
+    :db/id 138}
+   {:person/name &quot;Sigourney Weaver&quot;,
+    :person/born #inst &quot;1949-10-08T00:00:00.000-00:00&quot;,
+    :db/id 139}
+   {:person/name &quot;Veronica Cartwright&quot;,
+    :person/born #inst &quot;1949-04-20T00:00:00.000-00:00&quot;,
+    :db/id 140}
+   {:person/name &quot;Carrie Henn&quot;, :db/id 141}
+   {:person/name &quot;George Miller&quot;,
+    :person/born #inst &quot;1945-03-03T00:00:00.000-00:00&quot;,
+    :db/id 142}
+   {:person/name &quot;Steve Bisley&quot;,
+    :person/born #inst &quot;1951-12-26T00:00:00.000-00:00&quot;,
+    :db/id 143}
+   {:person/name &quot;Joanne Samuel&quot;, :db/id 144}
+   {:person/name &quot;Michael Preston&quot;,
+    :person/born #inst &quot;1938-05-14T00:00:00.000-00:00&quot;,
+    :db/id 145}
+   {:person/name &quot;Bruce Spence&quot;,
+    :person/born #inst &quot;1945-09-17T00:00:00.000-00:00&quot;,
+    :db/id 146}
+   {:person/name &quot;George Ogilvie&quot;,
+    :person/born #inst &quot;1931-03-05T00:00:00.000-00:00&quot;,
+    :db/id 147}
+   {:person/name &quot;Tina Turner&quot;,
+    :person/born #inst &quot;1939-11-26T00:00:00.000-00:00&quot;,
+    :db/id 148}
+   {:person/name &quot;Sophie Marceau&quot;,
+    :person/born #inst &quot;1966-11-17T00:00:00.000-00:00&quot;,
+    :db/id 149}
+   {:movie/title &quot;The Terminator&quot;,
+    :movie/year 1984,
+    :movie/director 100,
+    :movie/cast #{101 102 103},
+    :movie/sequel 207,
+    :db/id 200}
+   {:movie/title &quot;First Blood&quot;,
+    :movie/year 1982,
+    :movie/director 104,
+    :movie/cast #{105 106 107},
+    :movie/sequel 209,
+    :db/id 201}
+   {:movie/title &quot;Predator&quot;,
+    :movie/year 1987,
+    :movie/director 108,
+    :movie/cast #{101 109 110},
+    :movie/sequel 211,
+    :db/id 202}
+   {:movie/title &quot;Lethal Weapon&quot;,
+    :movie/year 1987,
+    :movie/director 111,
+    :movie/cast #{112 113 114},
+    :movie/sequel 212,
+    :db/id 203}
+   {:movie/title &quot;RoboCop&quot;,
+    :movie/year 1987,
+    :movie/director 115,
+    :movie/cast #{116 117 118},
+    :db/id 204}
+   {:movie/title &quot;Commando&quot;,
+    :movie/year 1985,
+    :movie/director 119,
+    :movie/cast #{101 120 121},
+    :trivia
+    &quot;In 1986, a sequel was written with an eye to having\n  John McTiernan direct. Schwarzenegger wasn't interested in reprising\n  the role. The script was then reworked with a new central character,\n  eventually played by Bruce Willis, and became Die Hard&quot;,
+    :db/id 205}
+   {:movie/title &quot;Die Hard&quot;,
+    :movie/year 1988,
+    :movie/director 108,
+    :movie/cast #{122 123 124},
+    :db/id 206}
+   {:movie/title &quot;Terminator 2: Judgment Day&quot;,
+    :movie/year 1991,
+    :movie/director 100,
+    :movie/cast #{101 102 125 126},
+    :movie/sequel 208,
+    :db/id 207}
+   {:movie/title &quot;Terminator 3: Rise of the Machines&quot;,
+    :movie/year 2003,
+    :movie/director 127,
+    :movie/cast #{101 128 129},
+    :db/id 208}
+   {:movie/title &quot;Rambo: First Blood Part II&quot;,
+    :movie/year 1985,
+    :movie/director 130,
+    :movie/cast #{105 106 131},
+    :movie/sequel 210,
+    :db/id 209}
+   {:movie/title &quot;Rambo III&quot;,
+    :movie/year 1988,
+    :movie/director 132,
+    :movie/cast #{105 106 133},
+    :db/id 210}
+   {:movie/title &quot;Predator 2&quot;,
+    :movie/year 1990,
+    :movie/director 134,
+    :movie/cast #{113 114 135},
+    :db/id 211}
+   {:movie/title &quot;Lethal Weapon 2&quot;,
+    :movie/year 1989,
+    :movie/director 111,
+    :movie/cast #{112 113 136},
+    :movie/sequel 213,
+    :db/id 212}
+   {:movie/title &quot;Lethal Weapon 3&quot;,
+    :movie/year 1992,
+    :movie/director 111,
+    :movie/cast #{112 113 136},
+    :db/id 213}
+   {:movie/title &quot;Alien&quot;,
+    :movie/year 1979,
+    :movie/director 137,
+    :movie/cast #{138 139 140},
+    :movie/sequel 215,
+    :db/id 214}
+   {:movie/title &quot;Aliens&quot;,
+    :movie/year 1986,
+    :movie/director 100,
+    :movie/cast #{139 141 103},
+    :db/id 215}
+   {:movie/title &quot;Mad Max&quot;,
+    :movie/year 1979,
+    :movie/director 142,
+    :movie/cast #{112 143 144},
+    :movie/sequel 217,
+    :db/id 216}
+   {:movie/title &quot;Mad Max 2&quot;,
+    :movie/year 1981,
+    :movie/director 142,
+    :movie/cast #{112 145 146},
+    :movie/sequel 218,
+    :db/id 217}
+   {:movie/title &quot;Mad Max Beyond Thunderdome&quot;,
+    :movie/year 1985,
+    :movie/director #{142 147},
+    :movie/cast #{112 148},
+    :db/id 218}
+   {:movie/title &quot;Braveheart&quot;,
+    :movie/year 1995,
+    :movie/director 112,
+    :movie/cast #{112 149},
+    :db/id 219}&#93;&#41;
+</code></pre><p></div></p><p>Loading this data into Trip is easy.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;trip/transact! t2 my-maps&#41;
+nil ;; let's avoid printing out the entire database by explicitly returning `nil` here
+</code></pre><p></div></p><h2>Querying movie data</h2><p>With the data loaded you can now execute a query by calling Trip's <code>q</code> API, which takes the result of a <code>db</code> call as it's second argument. The meaning of this query will become apparent very soon!</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;trip/q '{:find &#91;?title&#93;
+          :where &#91;&#91;&#95; :movie/title ?title&#93;&#93;}
+        &#40;trip/db t2&#41;&#41;
+</code></pre><p></div></p><p>To simplify this <code>trip/q</code> call throughout the rest of the tutorial we can define a new <code>q</code> function that saves us a few characters and visual clutter.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;defn q &#91;query &amp; args&#93;
+  &#40;apply trip/q query &#40;trip/db t2&#41; args&#41;&#41;
+</code></pre><p></div></p><p>Queries can then be executed trivially:</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?title&#93;
+     :where &#91;&#91;&#95; :movie/title ?title&#93;&#93;}&#41;
+</code></pre><p></div></p><h2>Extensible Data Notation</h2><p>In Trip, a Datalog query is written in <a href='http://edn-format.org'>extensible data notation (edn)</a>. Edn is a data format similar to JSON, but it:</p><ul><li>is extensible with user defined value types,</li><li>has more base types,</li><li>is a subset of <a href='http://clojure.org'>Clojure</a> data.</li></ul><p>Edn consists of:</p><ul><li>Numbers: <code>42</code>, <code>3.14159</code></li><li>Strings: <code>&quot;This is a string&quot;</code></li><li>Keywords: <code>:kw</code>, <code>:namespaced/keyword</code>, <code>:foo.bar/baz</code></li><li>Symbols: <code>max</code>, <code>+</code>, <code>title</code>, <code>?title</code></li><li>Vectors: <code>&#91;1 2 3&#93;</code> <code>&#91;foo &quot;bar&quot; ?baz 123 ...&#93;</code></li><li>Lists: <code>&#40;3.14 :foo &#91;:bar :baz&#93;&#41;</code>, <code>&#40;+ 1 2 3 4&#41;</code></li><li>Instants: <code>#inst &quot;2021-05-26&quot;</code></li><li>.. and a few other things which we will not need in this tutorial.</li></ul><p>Here is an example query that finds all movie titles in our example database:</p><pre><code class="edn">{:find &#91;?title&#93;
+ :where &#91;&#91;&#95; :movie/title ?title&#93;&#93;}
+</code></pre><p>Note that the query is a map with two key-value pairs:</p><ul><li>the <code>:find</code> vector containing the symbol <code>?title</code></li><li>the <code>:where</code> vector containing a single query clause <code>&#91;&#95; :movie/title ?title&#93;</code> (which is also a vector)</li></ul><p>Trip also supports queries in an alternative "vector" format:</p><pre><code class="edn">&#91;:find ?title
+ :where &#91;&#95; :movie/title ?title&#93;&#93;
+</code></pre><p>However, in this tutorial we will use the map format. Also note that Trip requires symbols representing logic variables to be preceded by <code>?</code>.</p><h3>Example Exercise</h3><p>Q1. Find all the movie titles in the database</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find ... }&#41;
+</code></pre><p></div></p><p>A1. (see above!)</p><h2>Basic Queries</h2><p>The example database we're using contains <em>movies</em> that are mostly, but not exclusively, from the 1980s. You'll find information about movie titles, release year, directors, cast members, etc. As the tutorial advances we'll learn more about the contents of the database and how it's organized.</p><p>The data model in Trip is based around <em>atomic collections of facts</em>. The individual facts are called triples. A triple is a 3-tuple consisting of:</p><ul><li>Entity ID</li><li>Attribute</li><li>Value</li></ul><p>Although it is the entire entity which is atomic in Trip (and not an individual triple), you can think of the database as a flat <strong>set of triples</strong> of the form:</p><pre><code>&#91;&lt;e-id&gt;  &lt;attribute&gt;      &lt;value&gt;         &#93;
+...
+&#91; 167    :person/name     &quot;James Cameron&quot; &#93;
+&#91; 234    :movie/title     &quot;Die Hard&quot;      &#93;
+&#91; 234    :movie/year      1987            &#93;
+&#91; 235    :movie/title     &quot;Terminator&quot;    &#93;
+&#91; 235    :movie/director  167             &#93;
+...
+</code></pre><p>Note that the last two triples share the same entity ID, which means they are facts about the same movie (one <em>entity</em>). Note also that the last triple's value is the same as the first triple's entity ID, i.e. the value of the <code>:movie/director</code> attribute is itself an entity.</p><p>A query is represented as a map with at least two key-value pairs. In the first pair, the key is the keyword <code>:find</code>, and the value is a vector of one or more <strong>logic variables</strong> (symbols with a <code>?</code> prefix, e.g. <code>?title</code> or <code>?e</code>). The other key-value pair is the <code>:where</code> keyword key with a vector of clauses which restrict the query to triples that match the given <strong>data patterns</strong>.</p><p>For example, this query finds all entity-ids that have the attribute <code>:person/name</code> with a value of <code>&quot;Ridley Scott&quot;</code>:</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?e&#93;
+     :where &#91;&#91;?e :person/name &quot;Ridley Scott&quot;&#93;&#93;}&#41;
+</code></pre><p></div></p><p>The simplest data pattern is a triple with some parts replaced with logic variables. It is the job of the query engine to figure out every possible value of each of the logic variables and return the ones that are specified in the <code>:find</code> clause.</p><p>The symbol <code>&#95;</code> can be used as a wildcard for the parts of the data pattern that you wish to ignore. You can also elide trailing values in a data pattern. Therefore, the following two queries are equivalent.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;= &#40;q '{:find &#91;?e&#93;
+        :where &#91;&#91;?e :person/name &#95;&#93;&#93;}&#41;
+   &#40;q '{:find &#91;?e&#93;
+        :where &#91;&#91;?e :person/name&#93;&#93;}&#41;&#41;
+</code></pre><p></div></p><h3>Exercises 1</h3><p>Q1.1. Find the entity ids of movies made in 1987</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find ... }&#41;
+</code></pre><p></div></p><p>Q1.2. Find the entity-id and titles of movies in the database</p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find ... }&#41;
+</code></pre><p></div></p><p>Q1.3. Find the name of all people in the database</p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find ... }&#41;
+</code></pre><p></div></p><h3>Solutions 1</h3><p>A1.1. Find the entity ids of movies made in 1987</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?e&#93;
+     :where &#91;&#91;?e :movie/year 1987&#93;&#93;}&#41;
+</code></pre><p></div></p><p>A1.2. Find the entity-id and titles of movies in the database</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?e ?title&#93;
+     :where &#91;&#91;?e :movie/title ?title&#93;&#93;}&#41;
+</code></pre><p></div></p><p>A1.3. Find the name of all people in the database</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?name&#93;
+     :where &#91;&#91;&#95; :person/name ?name&#93;&#93;}&#41;
+</code></pre><p></div></p><h2>Data patterns</h2><p>In the previous section we looked at <strong>data patterns</strong>, i.e., vectors within the <code>:where</code> vector, such as <code>&#91;e :movie/title &quot;Commando&quot;&#93;</code>. There can be many data patterns in a <code>:where</code> clause:</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?title&#93;
+     :where &#91;&#91;?e :movie/year 1987&#93;
+             &#91;?e :movie/title ?title&#93;&#93;}&#41;
+</code></pre><p></div></p><p>The important thing to note here is that the logic variable <code>?e</code> is used in both data patterns. When a logic variable is used in multiple places, the query engine requires it to be bound to the same value in each place. Therefore, this query will only find movie titles for movies made in 1987. This is essentially an implicit <code>INNER JOIN</code>.</p><p>The order of the data patterns does not matter functionally, however the user provided order will affect performance. Trip evaluates according to the user-provided clause ordering and therefore it is best to put 'selective' clauses as early in the join order as possible.</p><p>For example, whilst the previous query could written as follows, the 'selectivity' of the <code>:movie/year</code> clause will not be used (and potentially far more intermediate results than necessary will be generated):</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?title&#93;
+     :where &#91;&#91;?e :movie/title ?title&#93;
+             &#91;?e :movie/year 1987&#93;&#93;}&#41;
+</code></pre><p></div></p><p>However in both cases, the result set will be exactly the same.</p><p>Next, let's say we want to find out who starred in "Lethal Weapon". We will need three data patterns for this. The first one finds the entity ID of the movie with "Lethal Weapon" as the title:</p><pre><code class="clj">&#91;?m :movie/title &quot;Lethal Weapon&quot;&#93;
+</code></pre><p>Using the same entity ID at <code>?m</code>, we can find the cast members with the data pattern:</p><pre><code class="clj">&#91;?m :movie/cast ?p&#93;
+</code></pre><p>In this pattern, <code>?p</code> will now be (the entity ID of) a person entity, so we can grab the actual name with:</p><pre><code class="clj">&#91;?p :person/name ?name&#93;
+</code></pre><p>The query will therefore be:</p><pre><code class="clj">{:find &#91;name&#93;
+ :where &#91;&#91;m :movie/title &quot;Lethal Weapon&quot;&#93;
+         &#91;m :movie/cast p&#93;
+         &#91;p :person/name name&#93;&#93;}
+</code></pre><h2>Exercises 2</h2><p>Q2.1. Find movie titles made in 1985</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find ... }&#41;
+</code></pre><p></div></p><p>Q2.2. What year was "Alien" released?</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find ... }&#41;
+</code></pre><p></div></p><p>Q2.3. Who directed RoboCop? You will need to use <code>&#91;&lt;movie-eid&gt; :movie/director &lt;person-eid&gt;&#93;</code> to find the director for a movie.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find ... }&#41;
+</code></pre><p></div></p><p>Q2.4. Find directors who have directed Arnold Schwarzenegger in a movie.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find ... }&#41;
+</code></pre><p></div></p><h2>Solutions 2</h2><p>A2.1. Find movie titles made in 1985</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?title&#93;
+     :where &#91;&#91;?m :movie/year 1985&#93;
+             &#91;?m :movie/title ?title&#93;&#93;}&#41;
+</code></pre><p></div></p><p>A2.2. What year was "Alien" released?</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?year&#93;
+     :where &#91;&#91;?m :movie/title &quot;Alien&quot;&#93;
+             &#91;?m :movie/year ?year&#93;&#93;}&#41;
+</code></pre><p></div></p><p>A2.3. Who directed RoboCop? You will need to use <code>&#91;&lt;movie-eid&gt; :movie/director &lt;person-eid&gt;&#93;</code> to find the director for a movie.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?name&#93;
+     :where &#91;&#91;?m :movie/title &quot;RoboCop&quot;&#93;
+             &#91;?m :movie/director ?d&#93;
+             &#91;?d :person/name ?name&#93;&#93;}&#41;
+</code></pre><p></div></p><p>A2.4. Find directors who have directed Arnold Schwarzenegger in a movie.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?name&#93;
+     :where &#91;&#91;?p :person/name &quot;Arnold Schwarzenegger&quot;&#93;
+             &#91;?m :movie/cast ?p&#93;
+             &#91;?m :movie/director ?d&#93;
+             &#91;?d :person/name ?name&#93;&#93;}&#41;
+</code></pre><p></div></p><h2>Parameterized queries</h2><p>Looking at this query:</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?title&#93;
+     :where &#91;&#91;?p :person/name &quot;Sylvester Stallone&quot;&#93;
+             &#91;?m :movie/cast ?p&#93;
+             &#91;?m :movie/title ?title&#93;&#93;}&#41;
+</code></pre><p></div></p><p>It would be great if we could reuse this query to find movie titles for any actor and not just for "Sylvester Stallone". This is possible with an <code>:in</code> clause, which provides the query with input parameters, much in the same way that function or method arguments do in your programming language.</p><p>The database argument to <code>q</code> is always an implicit <code>$</code> parameter. When specifying other parameters you must state <code>$</code> explicitly.</p><p>Here's that query with an input parameter for the actor:</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?title&#93;
+     :in &#91;$ ?name&#93;
+     :where &#91;&#91;?p :person/name ?name&#93;
+             &#91;?m :movie/cast ?p&#93;
+             &#91;?m :movie/title ?title&#93;&#93;}
+   &quot;Sylvester Stallone&quot;&#41;
+</code></pre><p></div></p><p>This query takes one argument, <code>name</code>, which will be the name of some actor.</p><p>The above query is executed like <code>&#40;trip/q query db &quot;Sylvester Stallone&quot;&#41;</code>, where <code>query</code> is the query we just saw, and <code>db</code> is a database value. You can have any number of inputs to a query.</p><p>In the above query, the input logic variable <code>name</code> is bound to a scalar - a string in this case. There are four different kinds of input: scalars, tuples, collections, and relations.</p><h3>Tuples</h3><p>A tuple input is written as e.g. <code>&#91;name age&#93;</code> and can be used when you want to destructure an input. Let's say you have the vector <code>&#91;&quot;James Cameron&quot; &quot;Arnold Schwarzenegger&quot;&#93;</code> and you want to use this as input to find all movies where these two people collaborated:</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?title&#93;
+     :in &#91;$ &#91;?director ?actor&#93;&#93;
+     :where &#91;&#91;?d :person/name ?director&#93;
+             &#91;?a :person/name ?actor&#93;
+             &#91;?m :movie/director ?d&#93;
+             &#91;?m :movie/cast ?a&#93;
+             &#91;?m :movie/title ?title&#93;&#93;}
+   &#91;&quot;James Cameron&quot; &quot;Arnold Schwarzenegger&quot;&#93;&#41;
+</code></pre><p></div></p><p>Of course, in this case, you could just as well use two distinct inputs instead:</p><pre><code class="clj">:in &#91;$ director actor&#93;
+</code></pre><h3>Collections</h3><p>You can use collection destructuring to implement a kind of <em>logical OR</em> in your query. Say you want to find all movies directed by either James Cameron <strong>or</strong> Ridley Scott:</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?title&#93;
+     :in &#91;$ &#91;?director ...&#93;&#93;
+     :where &#91;&#91;?p :person/name ?director&#93;
+             &#91;?m :movie/director ?p&#93;
+             &#91;?m :movie/title ?title&#93;&#93;}
+   &#91;&quot;James Cameron&quot; &quot;Ridley Scott&quot;&#93;&#41;
+</code></pre><p></div></p><p>Here, the <code>director</code> logic variable is initially bound to both "James Cameron" and "Ridley Scott". Note that the ellipsis following <code>director</code> is a literal, not elided code.</p><h2>Relations</h2><p>Relations - a set of tuples - are the most interesting and powerful of input types, since you can join external relations with the triples in your database.</p><p>As a simple example, let's consider a relation with tuples <code>&#91;movie-title box-office-earnings&#93;</code>:</p><pre><code class="clj">&#91;
+ ...
+ &#91;&quot;Die Hard&quot; 140700000&#93;
+ &#91;&quot;Alien&quot; 104931801&#93;
+ &#91;&quot;Lethal Weapon&quot; 120207127&#93;
+ &#91;&quot;Commando&quot; 57491000&#93;
+ ...
+&#93;
+</code></pre><p>Let's use this data and the data in our database to find box office earnings for a particular director:</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?title ?box-office&#93;
+     :in &#91;$ ?director &#91;&#91;?title ?box-office&#93;&#93;&#93;
+     :where &#91;&#91;?p :person/name ?director&#93;
+             &#91;?m :movie/director ?p&#93;
+             &#91;?m :movie/title ?title&#93;&#93;}
+   &quot;Ridley Scott&quot;
+   &#91;&#91;&quot;Die Hard&quot; 140700000&#93;
+     &#91;&quot;Alien&quot; 104931801&#93;
+     &#91;&quot;Lethal Weapon&quot; 120207127&#93;
+     &#91;&quot;Commando&quot; 57491000&#93;&#93;&#41;
+</code></pre><p></div></p><p>Note that the <code>box-office</code> logic variable does not appear in any of the data patterns in the <code>:where</code> clause.</p><h2>Exercises 3</h2><p>Q3.1. Find movie title by year</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find &#91;?title&#93;
+     :in &#91;$ ?year&#93;
+     :where ...}&#41;
+</code></pre><p></div></p><p>Q3.2. Given a list of movie titles, find the title and the year that movie was released.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find &#91;?title ?year&#93;
+     :in ...
+     :where ...}&#41;
+</code></pre><p></div></p><p>Q3.3 Find all movie <code>title</code>s where the <code>actor</code> and the <code>director</code> has worked together</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find &#91;?title&#93;
+     :in &#91;$ ?actor ?director&#93;
+     :where ...}&#41;
+</code></pre><p></div></p><p>Q3.4. Write a query that, given an actor name and a relation with movie-title/rating, finds the movie titles and corresponding rating for which that actor was a cast member.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find &#91;?title ?rating&#93;
+     :in ...
+     :where ...}&#41;
+</code></pre><p></div></p><h2>Solutions 3</h2><p>A3.1. Find movie title by year</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?title&#93;
+     :in &#91;$ ?year&#93;
+     :where &#91;&#91;?m :movie/year ?year&#93;
+             &#91;?m :movie/title ?title&#93;&#93;}
+   1988&#41;
+</code></pre><p></div></p><p>A3.2. Given a list of movie titles, find the title and the year that movie was released.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?title ?year&#93;
+     :in &#91;$ &#91;?title ...&#93;&#93;
+     :where &#91;&#91;?m :movie/title ?title&#93;
+             &#91;?m :movie/year ?year&#93;&#93;}
+   &#91;&quot;Lethal Weapon&quot; &quot;Lethal Weapon 2&quot; &quot;Lethal Weapon 3&quot;&#93;&#41;
+</code></pre><p></div></p><p>A3.3 Find all movie <code>title</code>s where the <code>actor</code> and the <code>director</code> has worked together</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?title&#93;
+     :in &#91;$ ?actor ?director&#93;
+     :where &#91;&#91;?a :person/name ?actor&#93;
+             &#91;?d :person/name ?director&#93;
+             &#91;?m :movie/cast ?a&#93;
+             &#91;?m :movie/director ?d&#93;
+             &#91;?m :movie/title ?title&#93;&#93;}
+   &quot;Michael Biehn&quot;
+   &quot;James Cameron&quot;&#41;
+</code></pre><p></div></p><p>A3.4. Write a query that, given an actor name and a relation with movie-title/rating, finds the movie titles and corresponding rating for which that actor was a cast member.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?title ?rating&#93;
+     :in &#91;$ ?name &#91;&#91;?title ?rating&#93;&#93;&#93;
+     :where &#91;&#91;?p :person/name ?name&#93;
+             &#91;?m :movie/cast ?p&#93;
+             &#91;?m :movie/title ?title&#93;&#93;}
+   &quot;Mel Gibson&quot;
+   &#91;&#91;&quot;Die Hard&quot; 8.3&#93;
+    &#91;&quot;Alien&quot; 8.5&#93;
+    &#91;&quot;Lethal Weapon&quot; 7.6&#93;
+    &#91;&quot;Commando&quot; 6.5&#93;
+    &#91;&quot;Mad Max Beyond Thunderdome&quot; 6.1&#93;
+    &#91;&quot;Mad Max 2&quot; 7.6&#93;
+    &#91;&quot;Rambo: First Blood Part II&quot; 6.2&#93;
+    &#91;&quot;Braveheart&quot; 8.4&#93;
+    &#91;&quot;Terminator 2: Judgment Day&quot; 8.6&#93;
+    &#91;&quot;Predator 2&quot; 6.1&#93;
+    &#91;&quot;First Blood&quot; 7.6&#93;
+    &#91;&quot;Aliens&quot; 8.5&#93;
+    &#91;&quot;Terminator 3: Rise of the Machines&quot; 6.4&#93;
+    &#91;&quot;Rambo III&quot; 5.4&#93;
+    &#91;&quot;Mad Max&quot; 7.0&#93;
+    &#91;&quot;The Terminator&quot; 8.1&#93;
+    &#91;&quot;Lethal Weapon 2&quot; 7.1&#93;
+    &#91;&quot;Predator&quot; 7.8&#93;
+    &#91;&quot;Lethal Weapon 3&quot; 6.6&#93;
+    &#91;&quot;RoboCop&quot; 7.5&#93;&#93;&#41;
+</code></pre><p></div></p><h2>Predicates</h2><p>So far, we have only been dealing with <strong>data patterns</strong>: <code>&#91;m :movie/year year&#93;</code>. We have not yet seen a proper way of handling questions like "<em>Find all movies released before 1984</em>". This is where <strong>predicate clauses</strong> come into play.</p><p>Let's start with the query for the question above:</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?title&#93;
+     :where &#91;&#91;?m :movie/title ?title&#93;
+             &#91;?m :movie/year ?year&#93;
+             &#91;&#40;&lt; ?year 1984&#41;&#93;&#93;}&#41;
+</code></pre><p></div></p><p>The last clause, <code>&#91;&#40;&lt; year 1984&#41;&#93;</code>, is a predicate clause. The predicate clause filters the result set to only include results for which the predicate returns a "truthy" (non-nil, non-false) value. You can use any Clojure function as a predicate function:</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?name&#93;
+     :where &#91;&#91;?p :person/name ?name&#93;
+             &#91;&#40;clojure.string/starts-with? ?name &quot;M&quot;&#41;&#93;&#93;}&#41;
+</code></pre><p></div></p><p>All <code>clojure.core/&#42;</code> functions may be used as predicates without namespace qualification: <code>&lt;, &gt;, &lt;=, &gt;=, =, not=</code> and so on.</p><p>Clojure functions must be fully namespace-qualified, so if you have defined your own predicate <code>awesome?</code> you must write it as <code>&#40;my.namespace/awesome? ?movie&#41;</code>. Additionally, due to the use of <code>eval</code> within Trip it is typically required to pass the Clojure function reference into the query as an explicit argument.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?name&#93;
+     :in &#91;$ ?fn&#93;
+     :where &#91;&#91;?p :person/name ?name&#93;
+             &#91;&#40;?fn ?name&#41;&#93;&#93;}
+    &#40;fn awesome &#91;s&#93;
+      &#40;clojure.string/starts-with? s &quot;M&quot;&#41;&#41;&#41;
+</code></pre><p></div></p><h2>Exercises 4</h2><p>Q4.1. Find movies older than a certain year (inclusive)</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find &#91;?title&#93;
+     :in &#91;?year&#93;
+     :where ...}&#41;
+</code></pre><p></div></p><p>Q2. Find actors older than Danny Glover</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find &#91;?actor&#93;
+     :where ...}&#41;
+</code></pre><p></div></p><p>Q3. Find movies newer than <code>year</code> (inclusive) and has a <code>rating</code> higher than the one supplied</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find &#91;?title&#93;
+     :in &#91;$ ?year ?rating &#91;&#91;?title ?r&#93;&#93;&#93;
+     :where ...}&#41;
+</code></pre><p></div></p><h2>Solutions 4</h2><p>Q4.1. Find movies older than a certain year (inclusive)</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?title&#93;
+     :in &#91;$ ?year&#93;
+     :where &#91;&#91;?m :movie/title ?title&#93;
+             &#91;?m :movie/year ?y&#93;
+             &#91;&#40;&lt;= ?y ?year&#41;&#93;&#93;}
+   1979&#41;
+</code></pre><p></div></p><p>Q2. Find actors older than Danny Glover</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?actor&#93;
+     :where &#91;&#91;?d :person/name &quot;Danny Glover&quot;&#93;
+             &#91;?d :person/born ?b1&#93;
+             &#91;?e :person/born ?b2&#93;
+             &#91;&#95; :movie/cast ?e&#93;
+             &#91;&#40;&lt; ?b2 ?b1&#41;&#93;
+             &#91;?e :person/name ?actor&#93;&#93;}&#41;
+</code></pre><p></div></p><p>Q3. Find movies newer than <code>year</code> (inclusive) and has a <code>rating</code> higher than the one supplied</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?title&#93;
+     :in &#91;$ ?year ?rating &#91;&#91;?title ?r&#93;&#93;&#93;
+     :where &#91;&#91;&#40;&lt; ?rating ?r&#41;&#93;
+             &#91;?m :movie/title ?title&#93;
+             &#91;?m :movie/year ?y&#93;
+             &#91;&#40;&lt;= ?year ?y&#41;&#93;&#93;}
+   1990
+   8.0
+   &#91;&#91;&quot;Die Hard&quot; 8.3&#93;
+    &#91;&quot;Alien&quot; 8.5&#93;
+    &#91;&quot;Lethal Weapon&quot; 7.6&#93;
+    &#91;&quot;Commando&quot; 6.5&#93;
+    &#91;&quot;Mad Max Beyond Thunderdome&quot; 6.1&#93;
+    &#91;&quot;Mad Max 2&quot; 7.6&#93;
+    &#91;&quot;Rambo: First Blood Part II&quot; 6.2&#93;
+    &#91;&quot;Braveheart&quot; 8.4&#93;
+    &#91;&quot;Terminator 2: Judgment Day&quot; 8.6&#93;
+    &#91;&quot;Predator 2&quot; 6.1&#93;
+    &#91;&quot;First Blood&quot; 7.6&#93;
+    &#91;&quot;Aliens&quot; 8.5&#93;
+    &#91;&quot;Terminator 3: Rise of the Machines&quot; 6.4&#93;
+    &#91;&quot;Rambo III&quot; 5.4&#93;
+    &#91;&quot;Mad Max&quot; 7.0&#93;
+    &#91;&quot;The Terminator&quot; 8.1&#93;
+    &#91;&quot;Lethal Weapon 2&quot; 7.1&#93;
+    &#91;&quot;Predator&quot; 7.8&#93;
+    &#91;&quot;Lethal Weapon 3&quot; 6.6&#93;
+    &#91;&quot;RoboCop&quot; 7.5&#93;&#93;&#41;
+</code></pre><p></div></p><h2>Transformation functions</h2><p><strong>Transformation functions</strong> are pure (side-effect free) functions which can be used in queries as "function expression" predicates to transform values and bind their results to new logic variables. Say, for example, there exists an attribute <code>:person/born</code> with type <code>:db.type/instant</code>. Given the birthday, it's easy to calculate the (very approximate) age of a person:</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;defn age &#91;birthday today&#93;
+  &#40;quot &#40;- &#40;.getTime today&#41;
+          &#40;.getTime birthday&#41;&#41;
+        &#40;&#42; 1000 60 60 24 365&#41;&#41;&#41;
+</code></pre><p></div></p><p>With this function, we can now calculate the age of a person <strong>inside the query itself</strong>:</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?age&#93;
+     :in &#91;$ ?age-fn ?name ?today&#93;
+     :where &#91;&#91;?p :person/name ?name&#93;
+             &#91;?p :person/born ?born&#93;
+             &#91;&#40;?age-fn ?born ?today&#41; ?age&#93;&#93;}
+   age
+   &quot;Tina Turner&quot;
+   &#40;js/Date.&#41;&#41;
+
+</code></pre><p></div></p><p>A transformation function clause has the shape <code>&#91;&#40;&lt;fn&gt; &lt;arg1&gt; &lt;arg2&gt; ...&#41; &lt;result-binding&gt;&#93;</code> where <code>&lt;result-binding&gt;</code> can be the same binding forms as we saw earlier:</p><ul><li>Scalar: <code>?age</code></li><li>Tuple: <code>&#91;?foo ?bar ?baz&#93;</code></li><li>Collection: <code>&#91;?name ...&#93;</code></li><li>Relation: <code>&#91;&#91;?title ?rating&#93;&#93;</code></li></ul><p>One thing to be aware of is that transformation functions can't be nested. For example, you can't write:</p><pre><code class="clj">&#91;&#40;f &#40;g ?x&#41;&#41; ?a&#93;
+</code></pre><p>Instead, you must bind intermediate results in temporary logic variables:</p><pre><code class="clj">&#91;&#40;g ?x&#41; ?t&#93;
+&#91;&#40;f ?t&#41; ?a&#93;
+</code></pre><h2>Exercises 5</h2><p>Q5.1. Find people by age. Use the function <code>age</code> to find the names of people, given their age and a date representing "today".</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find &#91;?name&#93;
+     :in &#91;$ ?age-fn ?age ?today&#93;
+     :where ...}&#41;
+</code></pre><p></div></p><p>Q5.2. Find the names of people younger than Bruce Willis and their corresponding age.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find &#91;?name ?age&#93;
+     :in &#91;$ ?age-fn ?today&#93;
+     :where ...}&#41;
+</code></pre><p></div></p><h2>Solutions 5</h2><p>Q5.1. Find people by age. Use the function <code>age</code> to find the names of people, given their age and a date representing "today".</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?name&#93;
+     :in &#91;$ ?age-fn ?age ?today&#93;
+     :where &#91;&#91;?p :person/name ?name&#93;
+             &#91;?p :person/born ?born&#93;
+             &#91;&#40;?age-fn ?born ?today&#41; ?age&#93;&#93;}
+   age
+   63
+   #inst &quot;2013-08-02T00:00:00.000-00:00&quot;&#41;
+</code></pre><p></div></p><p>Q5.2. Find the names of people younger than Bruce Willis and their corresponding age.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?name ?age&#93;
+     :in &#91;$ ?age-fn ?today&#93;
+     :where &#91;&#91;?p :person/name &quot;Bruce Willis&quot;&#93;
+             &#91;?p :person/born ?bruce-born&#93;
+             &#91;?p2 :person/name ?name&#93;
+             &#91;?p2 :person/born ?born&#93;
+             &#91;&#40;&lt; ?bruce-born ?born&#41;&#93;
+             &#91;&#40;?age-fn ?born ?today&#41; ?age&#93;&#93;}
+   age
+   #inst &quot;2013-08-02T00:00:00.000-00:00&quot;&#41;
+</code></pre><p></div></p><h2>Aggregates</h2><p>Aggregate functions such as <code>sum</code>, <code>max</code> etc. are readily available in Trip's Datalog implementation. They are written in the <code>:find</code> clause in your query:</p><pre><code class="clj">{:find &#91;&#40;max ?date&#41;&#93;
+ :where
+ ...}
+</code></pre><p>An aggregate function collects values from multiple triples and returns</p><ul><li>A single value: <code>min</code>, <code>max</code>, <code>sum</code>, <code>avg</code>, etc.</li><li>A collection of values: <code>&#40;min ?n ?d&#41;</code> <code>&#40;max ?n ?d&#41;</code> <code>&#40;sample ?n ?e&#41;</code> etc. where <code>?n</code> is an integer specifying the size of the collection.</li></ul><h2>Exercises 6</h2><p>Q6.1. <code>count</code> the number of movies in the database</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find &#91;...&#93;
+     :where ...}&#41;
+</code></pre><p></div></p><p>Q2. Find the birth date of the oldest person in the database.</p><p><div style="width: 600px;" class="cljs-showcase"><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find &#91;...&#93;
+     :where ...}&#41;
+</code></pre></p><p></div></p><p>Q3. Given a collection of actors and (the now familiar) ratings data. Find the average rating for each actor. The query should return the actor name and the <code>avg</code> rating.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find &#91;...&#93;
+     :in &#91;$ &#91;?name ...&#93; &#91;&#91;?title ?rating&#93;&#93;
+     :where ...}&#41;
+</code></pre><p></div></p><h2>Solutions 6</h2><p>Q6.1. <code>count</code> the number of movies in the database</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;&#40;count ?m&#41;&#93;
+     :where &#91;&#91;?m :movie/title&#93;&#93;}&#41;
+</code></pre><p></div></p><p>Q2. Find the birth date of the oldest person in the database.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;&#40;min ?date&#41;&#93;
+     :where &#91;&#91;&#95; :person/born ?date&#93;&#93;}&#41;
+</code></pre><p></div></p><p>Q3. Given a collection of actors and (the now familiar) ratings data. Find the average rating for each actor. The query should return the actor name and the <code>avg</code> rating.</p><p><div style="width: 600px;" class="cljs-showcase"><pre><code class="clojure">&#40;q '{:find &#91;?name &#40;avg ?rating&#41;&#93;
+     :in &#91;$ &#91;?name ...&#93; &#91;&#91;?title ?rating&#93;&#93;&#93;
+     :where &#91;&#91;?p :person/name ?name&#93;
+             &#91;?m :movie/cast ?p&#93;
+             &#91;?m :movie/title ?title&#93;&#93;}
+   &#91;&quot;Sylvester Stallone&quot; &quot;Arnold Schwarzenegger&quot; &quot;Mel Gibson&quot;&#93;
+   &#91;&#91;&quot;Die Hard&quot; 8.3&#93;
+    &#91;&quot;Alien&quot; 8.5&#93;
+    &#91;&quot;Lethal Weapon&quot; 7.6&#93;
+    &#91;&quot;Commando&quot; 6.5&#93;
+    &#91;&quot;Mad Max Beyond Thunderdome&quot; 6.1&#93;
+    &#91;&quot;Mad Max 2&quot; 7.6&#93;
+    &#91;&quot;Rambo: First Blood Part II&quot; 6.2&#93;
+    &#91;&quot;Braveheart&quot; 8.4&#93;
+    &#91;&quot;Terminator 2: Judgment Day&quot; 8.6&#93;
+    &#91;&quot;Predator 2&quot; 6.1&#93;
+    &#91;&quot;First Blood&quot; 7.6&#93;
+    &#91;&quot;Aliens&quot; 8.5&#93;
+    &#91;&quot;Terminator 3: Rise of the Machines&quot; 6.4&#93;
+    &#91;&quot;Rambo III&quot; 5.4&#93;
+    &#91;&quot;Mad Max&quot; 7.0&#93;
+    &#91;&quot;The Terminator&quot; 8.1&#93;
+    &#91;&quot;Lethal Weapon 2&quot; 7.1&#93;
+    &#91;&quot;Predator&quot; 7.8&#93;
+    &#91;&quot;Lethal Weapon 3&quot; 6.6&#93;
+    &#91;&quot;RoboCop&quot; 7.5&#93;&#93;&#41;
+</code></pre></p><p></div></p><h2>Rules</h2><p>Many times we have had to write the following three lines of repetitive query code:</p><pre><code class="clj">&#91;p :person/name name&#93;
+&#91;m :movie/cast p&#93;
+&#91;m :movie/title title&#93;
+</code></pre><p><strong>Rules</strong> are the essential abstraction in Datalog. You can abstract away reusable parts of your queries into rules, give them meaningful names and forget about the implementation details, just like you can with functions in your favorite programming language. Let's create a rule for the three lines above:</p><pre><code class="clj">&#91;&#40;actor-movie name title&#41;
+ &#91;p :person/name name&#93;
+ &#91;m :movie/cast p&#93;
+ &#91;m :movie/title title&#93;&#93;
+</code></pre><p>The first vector is called the <em>head</em> of the rule where the first symbol is the name of the rule. The rest of the rule is called the <em>body</em>.</p><p>You can think of a rule as a kind of function, but remember that this is logic programming, so we can use the same rule to:</p><ul><li>find movie titles given an actor name, and</li><li>find actor names given a movie title.</li></ul><p>Put another way, we can use both <code>name</code> and <code>title</code> in <code>&#40;actor-movie name title&#41;</code> for input as well as for output. If we provide values for neither, we'll get all the possible combinations in the database. If we provide values for one or both, it will constrain the result returned by the query as you'd expect.</p><p>To use the above rule, you simply write the head of the rule instead of the data patterns. Any variable with values already bound will be input, the rest will be output.</p><p>The query to find cast members of some movie, for which we previously had to write:</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?name&#93;
+     :where &#91;&#91;?m :movie/title &quot;The Terminator&quot;&#93;
+             &#91;?m :movie/cast ?p&#93;
+             &#91;?p :person/name ?name&#93;&#93;}&#41;
+</code></pre><p></div></p><p>Now becomes:</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?name&#93;
+     :in &#91;$ %&#93;
+     :where &#91;&#40;actor-movie ?name &quot;The Terminator&quot;&#41;&#93;}
+   '&#91;&#91;&#40;actor-movie ?name ?title&#41;
+      &#91;?m :movie/title ?title&#93;
+      &#91;?m :movie/cast ?p&#93;
+      &#91;?p :person/name ?name&#93;&#93;&#93;&#41;
+
+</code></pre><p></div></p><p>You can write any number of rules, collect them in a quoted vector, and pass them to Trip using the special <code>%</code> parameter as above.</p><pre><code class="clj">&#91;&#91;&#40;rule-1 ?a ?b&#41;
+  ...&#93;
+ &#91;&#40;rule-2 ?a ?b&#41;
+  ...&#93;
+ ...&#93;
+</code></pre><p>You can use data patterns, predicates, transformation functions and calls to other rules in the body of a rule.</p><p>Rules can also be used as another tool to write <em>logical OR</em> queries, as the same rule name can be used several times:</p><pre><code class="clj">&#91;&#91;&#40;associated-with person movie&#41;
+  &#91;movie :movie/cast person&#93;&#93;
+ &#91;&#40;associated-with person movie&#41;
+  &#91;movie :movie/director person&#93;&#93;&#93;
+</code></pre><p>Subsequent rule definitions will only be used if the ones preceding it aren't satisfied.</p><p>Using this rule, we can find both directors and cast members very easily:</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?name&#93;
+     :in &#91;$ %&#93;
+     :where &#91;&#91;?m :movie/title &quot;Predator&quot;&#93;
+             &#40;associated-with ?p ?m&#41;
+             &#91;?p :person/name ?name&#93;&#93;}
+   '&#91;&#91;&#40;associated-with ?person ?movie&#41;
+      &#91;?movie :movie/cast ?person&#93;&#93;
+     &#91;&#40;associated-with ?person ?movie&#41;
+      &#91;?movie :movie/director ?person&#93;&#93;&#93;&#41;
+</code></pre><p></div></p><p>Given the fact that rules can contain calls to other rules, what would happen if a rule called itself? Interesting things, it turns out, but let's find out in the exercises.</p><h2>Exercises 7</h2><p>Q7.1. Write a rule <code>&#40;movie-year ?title ?year&#41;</code> where <code>?title</code> is the title of some movie and <code>?year</code> is that movie's release year.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find &#91;?title&#93;
+     :in &#91;$ %&#93;
+     :where &#91;&#40;movie-year ?title 1991&#41;&#93;}
+   '&#91;&#91;&#40;movie-year ?title ?year&#41;
+      ...&#93;&#93;&#41;
+</code></pre><p></div></p><p>Q7.2. Two people are friends if they have worked together in a movie. Write a rule <code>&#40;friends ?p1 ?p2&#41;</code> where <code>?p1</code> and <code>?p2</code> are person entities. Try with a few different <code>?name</code> inputs to make sure you got it right. There might be some edge cases here.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">;; remove '#&#95;' to uncomment the query
+#&#95;&#40;q '{:find &#91;?friend&#93;
+     :in &#91;$ % ?name&#93;
+     :where &#91;&#91;?p1 :person/name ?name&#93;
+             &#40;friends ?p1 ?p2&#41;
+             &#91;?p2 :person/name ?friend&#93;&#93;}
+   '&#91;&#91;&#40;friends ?p1 ?p2&#41;
+      ...&#93;&#93;&#41;
+</code></pre><p></div></p><h2>Solutions 7</h2><p>Q7.1. Write a rule <code>&#40;movie-year ?title ?year&#41;</code> where <code>?title</code> is the title of some movie and <code>?year</code> is that movie's release year.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?title&#93;
+     :in &#91;$ %&#93;
+     :where &#91;&#40;movie-year ?title 1991&#41;&#93;}
+   '&#91;&#91;&#40;movie-year ?title ?year&#41;
+      &#91;?m :movie/title ?title&#93;
+      &#91;?m :movie/year ?year&#93;&#93;&#93;&#41;
+</code></pre><p></div></p><p>Q7.2. Two people are friends if they have worked together in a movie. Write a rule <code>&#40;friends ?p1 ?p2&#41;</code> where <code>?p1</code> and <code>?p2</code> are person entities. Try with a few different <code>?name</code> inputs to make sure you got it right. There might be some edge cases here.</p><p><div style="width: 600px;" class="cljs-showcase"></p><pre><code class="clojure">&#40;q '{:find &#91;?friend&#93;
+     :in &#91;$ % ?name&#93;
+     :where &#91;&#91;?p1 :person/name ?name&#93;
+             &#40;friends ?p1 ?p2&#41;
+             &#91;?p2 :person/name ?friend&#93;&#93;}
+   '&#91;&#91;&#40;friends ?p1 ?p2&#41;
+      &#91;?m :movie/cast ?p1&#93;
+      &#91;?m :movie/cast ?p2&#93;
+      &#91;&#40;not= ?p1 ?p2&#41;&#93;&#93;
+     &#91;&#40;friends ?p1 ?p2&#41;
+      &#91;?m :movie/cast ?p1&#93;
+      &#91;?m :movie/director ?p2&#93;
+      &#91;&#40;not= ?p1 ?p2&#41;&#93;&#93;
+     &#91;&#40;friends ?p1 ?p2&#41;
+      &#91;?m :movie/director ?p1&#93;
+      &#91;?m :movie/cast ?p2&#93;
+      &#91;&#40;not= ?p1 ?p2&#41;&#93;&#93;&#93;
+   &quot;Sigourney Weaver&quot;&#41;
+</code></pre><p></div></p><h2>The End</h2><p>That's a wrap! Thanks for taking a look at Trip and please give the <a href='https://github.com/juxt/trip/'>repo</a> a star. PRs, Issues and questions are welcome 🙏</p><p><script src="js/main.js" type="application/javascript"></script></p><h2>Copyright & License</h2><p>LearnDatalogToday.org is Copyright © 2013 - Present, Jonas Enlund</p><p>The MIT License (MIT)</p><p>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:</p><p>The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.</p><p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p><h2>Thank You</h2><p>Thank you Jonas, Michel and contributors for freely licensing your excellent materials!</p>
